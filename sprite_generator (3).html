@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprite Generator — Gemini AI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0f0f13;
+    --surface: #18181f;
+    --border: #2a2a35;
+    --accent: #c8a84b;
+    --accent2: #7b5ea7;
+    --text: #e8e6e0;
+    --muted: #6b6878;
+    --danger: #e05252;
+    --success: #52c47a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+  }
+
+  .logo span { color: var(--muted); font-weight: 400; }
+
+  main {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* LEFT PANEL */
+  .panel {
+    border-right: 1px solid var(--border);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* API Key */
+  .apikey-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .apikey-row input[type=password] {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .apikey-row input[type=password]:focus { border-color: var(--accent2); }
+  .apikey-row input[type=password].valid { border-color: var(--success); }
+  .apikey-save {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 9px 12px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    transition: all 0.15s;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .apikey-save:hover { border-color: var(--accent); color: var(--accent); }
+  .apikey-status {
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    margin-top: 5px;
+    height: 14px;
+  }
+  .apikey-status.ok { color: var(--success); }
+  .apikey-status.err { color: var(--danger); }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(200,168,75,0.04); }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-zone .icon { font-size: 2rem; margin-bottom: 8px; }
+  .upload-zone p { font-size: 0.85rem; color: var(--muted); }
+  .upload-zone strong { color: var(--text); }
+
+  #preview-wrap {
+    display: none;
+    position: relative;
+  }
+  #preview-wrap img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  #preview-wrap .remove-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: rgba(0,0,0,0.7);
+    border: none;
+    color: #fff;
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Animazione type */
+  .anim-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .anim-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    padding: 10px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: 'Space Grotesk', sans-serif;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .anim-btn:hover { border-color: var(--accent); color: var(--text); }
+  .anim-btn.active { border-color: var(--accent); background: rgba(200,168,75,0.1); color: var(--accent); }
+  .anim-btn .emoji { display: block; font-size: 1.3rem; margin-bottom: 4px; }
+
+  /* Frame count */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+  .slider-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--accent);
+    min-width: 24px;
+    text-align: right;
+  }
+
+  /* Prompt */
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem;
+    padding: 12px;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent2); }
+
+  /* Generate btn */
+  #generate-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #0f0f13;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: opacity 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  #generate-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+  #generate-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* RIGHT PANEL */
+  .output {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    gap: 28px;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+  }
+  .empty-state .big { font-size: 3rem; margin-bottom: 16px; }
+  .empty-state p { font-size: 0.9rem; line-height: 1.6; max-width: 280px; }
+
+  /* Loading */
+  #loading {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-msg { color: var(--muted); font-size: 0.9rem; }
+  #loading-step { color: var(--accent); font-family: 'Space Mono', monospace; font-size: 0.8rem; margin-top: 4px; }
+
+  /* Result */
+  #result { display: none; flex-direction: column; align-items: center; gap: 24px; width: 100%; }
+
+  .animation-viewer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  #anim-canvas {
+    border-radius: 6px;
+    image-rendering: pixelated;
+    max-width: 300px;
+    max-height: 400px;
+    width: auto;
+    height: auto;
+  }
+
+  .viewer-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .ctrl-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 36px; height: 36px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s;
+  }
+  .ctrl-btn:hover { border-color: var(--accent); }
+
+  .fps-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .fps-control input { width: 80px; }
+  .fps-control span { font-family: 'Space Mono', monospace; color: var(--accent); min-width: 20px; }
+
+  /* Frame strip */
+  .frame-strip {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 0;
+    max-width: 600px;
+  }
+  .frame-strip img {
+    height: 64px;
+    width: auto;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .frame-strip img.active { border-color: var(--accent); }
+
+  /* Download buttons */
+  .download-row {
+    display: flex;
+    gap: 10px;
+  }
+  .dl-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dl-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .dl-btn.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  .dl-btn.primary:hover { opacity: 0.85; }
+
+  /* Error */
+  #error-msg {
+    display: none;
+    background: rgba(224,82,82,0.1);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    padding: 16px 20px;
+    color: var(--danger);
+    font-size: 0.85rem;
+    max-width: 400px;
+    text-align: center;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 12px 32px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* BG check pattern for transparent */
+  .checker {
+    background-image: linear-gradient(45deg, #222 25%, transparent 25%),
+      linear-gradient(-45deg, #222 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #222 75%),
+      linear-gradient(-45deg, transparent 75%, #222 75%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+    background-color: #1a1a1a;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SPRITE<span>.gen</span></div>
+  <div style="color:var(--muted);font-size:0.8rem;margin-left:8px">— powered by Gemini AI</div>
+</header>
+
+<main>
+  <!-- LEFT PANEL -->
+  <div class="panel">
+
+    <div>
+      <div class="section-label">00 — API Key Gemini</div>
+      <div class="apikey-row">
+        <input type="password" id="api-key-input" placeholder="AIza...">
+        <button class="apikey-save" id="apikey-save-btn">Salva</button>
+      </div>
+      <div class="apikey-status" id="apikey-status"></div>
+    </div>
+
+    <div>
+      <div class="section-label">01 — Personaggio</div>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept="image/*">
+        <div class="icon">🎨</div>
+        <p><strong>Carica l'immagine</strong><br>del tuo personaggio</p>
+      </div>
+      <div id="preview-wrap">
+        <img id="preview-img" src="" alt="preview">
+        <button class="remove-btn" id="remove-btn">×</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">02 — Tipo animazione</div>
+      <div class="anim-grid">
+        <button class="anim-btn active" data-anim="walk"><span class="emoji">🚶</span>Camminata</button>
+        <button class="anim-btn" data-anim="run"><span class="emoji">🏃</span>Corsa</button>
+        <button class="anim-btn" data-anim="idle"><span class="emoji">😐</span>Idle</button>
+        <button class="anim-btn" data-anim="attack"><span class="emoji">⚔️</span>Attacco</button>
+        <button class="anim-btn" data-anim="death"><span class="emoji">💀</span>Morte</button>
+        <button class="anim-btn" data-anim="jump"><span class="emoji">⬆️</span>Salto</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">03 — Numero frame</div>
+      <div class="slider-row">
+        <input type="range" id="frame-count" min="4" max="12" value="9">
+        <div class="slider-val" id="frame-val">9</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">04 — Note aggiuntive (opzionale)</div>
+      <textarea id="extra-prompt" placeholder="Es: sfondo trasparente, vista laterale, pixel art..."></textarea>
+    </div>
+
+    <button id="generate-btn" disabled>
+      <span>⚔️</span> GENERA ANIMAZIONE
+    </button>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="output">
+
+    <div class="empty-state" id="empty-state">
+      <div class="big">⚔️</div>
+      <p>Carica il tuo personaggio e scegli un'animazione per iniziare.</p>
+    </div>
+
+    <div id="loading">
+      <div class="spinner"></div>
+      <div>
+        <div id="loading-msg">Generazione in corso...</div>
+        <div id="loading-step"></div>
+      </div>
+    </div>
+
+    <div id="error-msg"></div>
+
+    <div id="result">
+      <div class="animation-viewer checker">
+        <canvas id="anim-canvas"></canvas>
+        <div class="viewer-controls">
+          <button class="ctrl-btn" id="prev-btn">‹</button>
+          <button class="ctrl-btn" id="play-btn">⏸</button>
+          <button class="ctrl-btn" id="next-btn">›</button>
+          <div class="fps-control">
+            FPS <input type="range" id="fps-slider" min="1" max="24" value="8">
+            <span id="fps-val">8</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame-strip" id="frame-strip"></div>
+
+      <div class="download-row">
+        <button class="dl-btn" id="dl-zip">📦 Scarica ZIP</button>
+        <button class="dl-btn" id="dl-sheet">🗂 Sprite Sheet</button>
+        <button class="dl-btn primary" id="dl-gif">🎞 Scarica GIF</button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>API: Gemini 2.0 Flash Experimental — Livello gratuito</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+
+<script>
+const GEMINI_MODEL_URL = key => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`;
+
+// API Key management
+const apiKeyInput = document.getElementById("api-key-input");
+const apiKeySaveBtn = document.getElementById("apikey-save-btn");
+const apiKeyStatus = document.getElementById("apikey-status");
+
+function getApiKey() {
+  return localStorage.getItem("gemini_api_key") || "";
+}
+
+function setApiKeyStatus(ok, msg) {
+  apiKeyStatus.textContent = msg;
+  apiKeyStatus.className = "apikey-status " + (ok ? "ok" : "err");
+}
+
+// Load saved key on startup
+const savedKey = getApiKey();
+if (savedKey) {
+  apiKeyInput.value = savedKey;
+  apiKeyInput.classList.add("valid");
+  setApiKeyStatus(true, "✓ chiave caricata");
+} else {
+  setApiKeyStatus(false, "inserisci la tua API key per continuare");
+}
+
+apiKeySaveBtn.onclick = () => {
+  const key = apiKeyInput.value.trim();
+  if (!key.startsWith("AIza") || key.length < 20) {
+    setApiKeyStatus(false, "✗ formato non valido");
+    apiKeyInput.classList.remove("valid");
+    return;
+  }
+  localStorage.setItem("gemini_api_key", key);
+  apiKeyInput.classList.add("valid");
+  setApiKeyStatus(true, "✓ salvata");
+  updateGenerateBtn();
+};
+
+const ANIM_PROMPTS = {
+  walk:   "walking cycle side view, smooth loop, weight shift, arms swinging naturally",
+  run:    "running cycle side view, fast motion, dynamic pose, legs pumping",
+  idle:   "idle breathing animation, subtle movement, slight body sway, blinking",
+  attack: "sword attack animation, wind-up then strike, follow through, aggressive pose",
+  death:  "death animation, stumble and fall to ground, defeated pose",
+  jump:   "jump animation, crouch then leap then land, full arc cycle"
+};
+
+let characterImageB64 = null;
+let characterMime = null;
+let selectedAnim = "walk";
+let generatedFrames = [];
+let currentFrame = 0;
+let animRunning = true;
+let fps = 8;
+let animInterval = null;
+
+// Upload
+const fileInput = document.getElementById("file-input");
+const uploadZone = document.getElementById("upload-zone");
+const previewWrap = document.getElementById("preview-wrap");
+const previewImg = document.getElementById("preview-img");
+const generateBtn = document.getElementById("generate-btn");
+
+uploadZone.addEventListener("dragover", e => { e.preventDefault(); uploadZone.classList.add("drag"); });
+uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("drag"));
+uploadZone.addEventListener("drop", e => { e.preventDefault(); uploadZone.classList.remove("drag"); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener("change", e => handleFile(e.target.files[0]));
+
+function handleFile(file) {
+  if (!file) return;
+  characterMime = file.type;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const result = e.target.result;
+    characterImageB64 = result.split(",")[1];
+    previewImg.src = result;
+    uploadZone.style.display = "none";
+    previewWrap.style.display = "block";
+    updateGenerateBtn();
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateGenerateBtn() {
+  generateBtn.disabled = !characterImageB64 || !getApiKey();
+}
+
+document.getElementById("remove-btn").onclick = () => {
+  characterImageB64 = null;
+  previewWrap.style.display = "none";
+  uploadZone.style.display = "block";
+  fileInput.value = "";
+  updateGenerateBtn();
+};
+
+// Anim buttons
+document.querySelectorAll(".anim-btn").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".anim-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedAnim = btn.dataset.anim;
+  };
+});
+
+// Frame count slider
+const frameSlider = document.getElementById("frame-count");
+const frameVal = document.getElementById("frame-val");
+frameSlider.oninput = () => frameVal.textContent = frameSlider.value;
+
+// FPS slider
+const fpsSlider = document.getElementById("fps-slider");
+const fpsValEl = document.getElementById("fps-val");
+fpsSlider.oninput = () => {
+  fps = parseInt(fpsSlider.value);
+  fpsValEl.textContent = fps;
+  if (animRunning) startAnim();
+};
+
+// Generate
+generateBtn.onclick = async () => {
+  if (!characterImageB64) return;
+  await generateAnimation();
+};
+
+async function generateAnimation() {
+  const frameCount = parseInt(frameSlider.value);
+  const extraPrompt = document.getElementById("extra-prompt").value.trim();
+  const animDesc = ANIM_PROMPTS[selectedAnim];
+
+  showLoading(true);
+  hideResult();
+  hideError();
+
+  generatedFrames = [];
+
+  const cols = 3;
+  const rows = Math.ceil(frameCount / cols);
+
+  const prompt = `You are a professional 2D game animator. 
+Generate a sprite sheet grid with exactly ${cols} columns and ${rows} rows (total ${frameCount} frames) showing this exact character performing a ${selectedAnim} animation.
+
+Animation description: ${animDesc}
+${extraPrompt ? "Additional notes: " + extraPrompt : ""}
+
+CRITICAL RULES:
+- The character must look IDENTICAL in every frame: same style, colors, proportions, and details as the reference image
+- Each frame must be evenly spaced in a ${cols}x${rows} grid
+- Black background (#000000) behind each frame
+- The animation must be a smooth, loopable cycle
+- Side view unless otherwise specified
+- Keep the character centered and same scale in every frame
+- No text, no labels, no borders between frames`;
+
+  setLoadingStep(`Generazione griglia ${cols}×${rows} (${frameCount} frame)...`);
+
+  try {
+    const apiKey = getApiKey();
+    if (!apiKey) { showError("API key non impostata."); showLoading(false); return; }
+    const response = await fetch(GEMINI_MODEL_URL(apiKey), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { inline_data: { mime_type: characterMime, data: characterImageB64 } },
+            { text: prompt }
+          ]
+        }],
+        generationConfig: { responseModalities: ["IMAGE", "TEXT"] }
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || "Errore API Gemini");
+    }
+
+    // Trova la parte immagine nella risposta
+    const imagePart = data.candidates?.[0]?.content?.parts?.find(p => p.inline_data);
+    if (!imagePart) throw new Error("Nessuna immagine generata. Riprova.");
+
+    const sheetB64 = imagePart.inline_data.data;
+    const sheetMime = imagePart.inline_data.mime_type;
+
+    setLoadingStep("Estrazione frame dalla griglia...");
+
+    // Carica l'immagine e taglia i frame
+    const sheetImg = await loadImage(`data:${sheetMime};base64,${sheetB64}`);
+    const fw = Math.floor(sheetImg.width / cols);
+    const fh = Math.floor(sheetImg.height / rows);
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        if (generatedFrames.length >= frameCount) break;
+        const canvas = document.createElement("canvas");
+        canvas.width = fw;
+        canvas.height = fh;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(sheetImg, col * fw, row * fh, fw, fh, 0, 0, fw, fh);
+        generatedFrames.push(canvas.toDataURL("image/png"));
+      }
+    }
+
+    showLoading(false);
+    showResult();
+
+  } catch (err) {
+    showLoading(false);
+    showError(err.message);
+  }
+}
+
+function loadImage(src) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => rej(new Error("Impossibile caricare l'immagine generata"));
+    img.src = src;
+  });
+}
+
+// Animation viewer
+const animCanvas = document.getElementById("anim-canvas");
+const animCtx = animCanvas.getContext("2d");
+
+function showResult() {
+  document.getElementById("result").style.display = "flex";
+  document.getElementById("empty-state").style.display = "none";
+  buildFrameStrip();
+  currentFrame = 0;
+  startAnim();
+}
+
+function buildFrameStrip() {
+  const strip = document.getElementById("frame-strip");
+  strip.innerHTML = "";
+  generatedFrames.forEach((src, i) => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.onclick = () => { currentFrame = i; drawFrame(i); updateStrip(i); };
+    if (i === 0) img.classList.add("active");
+    strip.appendChild(img);
+  });
+}
+
+function updateStrip(idx) {
+  document.querySelectorAll(".frame-strip img").forEach((img, i) => {
+    img.classList.toggle("active", i === idx);
+  });
+}
+
+function drawFrame(idx) {
+  const img = new Image();
+  img.onload = () => {
+    animCanvas.width = img.width;
+    animCanvas.height = img.height;
+    animCtx.clearRect(0, 0, animCanvas.width, animCanvas.height);
+    animCtx.drawImage(img, 0, 0);
+  };
+  img.src = generatedFrames[idx];
+  updateStrip(idx);
+}
+
+function startAnim() {
+  if (animInterval) clearInterval(animInterval);
+  animInterval = setInterval(() => {
+    if (!animRunning) return;
+    currentFrame = (currentFrame + 1) % generatedFrames.length;
+    drawFrame(currentFrame);
+  }, 1000 / fps);
+}
+
+document.getElementById("play-btn").onclick = () => {
+  animRunning = !animRunning;
+  document.getElementById("play-btn").textContent = animRunning ? "⏸" : "▶";
+};
+document.getElementById("prev-btn").onclick = () => {
+  currentFrame = (currentFrame - 1 + generatedFrames.length) % generatedFrames.length;
+  drawFrame(currentFrame);
+};
+document.getElementById("next-btn").onclick = () => {
+  currentFrame = (currentFrame + 1) % generatedFrames.length;
+  drawFrame(currentFrame);
+};
+
+// Download ZIP
+document.getElementById("dl-zip").onclick = async () => {
+  const zip = new JSZip();
+  generatedFrames.forEach((src, i) => {
+    const b64 = src.split(",")[1];
+    zip.file(`frame_${String(i).padStart(3,"0")}.png`, b64, { base64: true });
+  });
+  const blob = await zip.generateAsync({ type: "blob" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `sprite_${selectedAnim}.zip`;
+  a.click();
+};
+
+// Download Sprite Sheet
+document.getElementById("dl-sheet").onclick = () => {
+  if (!generatedFrames.length) return;
+  const tempImg = new Image();
+  tempImg.onload = () => {
+    const cols = 3;
+    const rows = Math.ceil(generatedFrames.length / cols);
+    const fw = tempImg.width, fh = tempImg.height;
+    const sheet = document.createElement("canvas");
+    sheet.width = fw * cols;
+    sheet.height = fh * rows;
+    const ctx = sheet.getContext("2d");
+
+    let loaded = 0;
+    generatedFrames.forEach((src, i) => {
+      const img = new Image();
+      img.onload = () => {
+        const col = i % cols, row = Math.floor(i / cols);
+        ctx.drawImage(img, col * fw, row * fh);
+        if (++loaded === generatedFrames.length) {
+          const a = document.createElement("a");
+          a.href = sheet.toDataURL("image/png");
+          a.download = `spritesheet_${selectedAnim}.png`;
+          a.click();
+        }
+      };
+      img.src = src;
+    });
+  };
+  tempImg.src = generatedFrames[0];
+};
+
+// Download GIF (semplificato — ZIP è più affidabile)
+document.getElementById("dl-gif").onclick = async () => {
+  const btn = document.getElementById("dl-gif");
+  btn.textContent = "⏳ Creazione GIF...";
+  btn.disabled = true;
+
+  try {
+    const zip = new JSZip();
+    generatedFrames.forEach((src, i) => {
+      const b64 = src.split(",")[1];
+      zip.file(`frame_${String(i).padStart(3,"0")}.png`, b64, { base64: true });
+    });
+    const blob = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `sprite_${selectedAnim}_frames.zip`;
+    a.click();
+    btn.textContent = "🎞 Scarica GIF";
+  } catch(e) {
+    btn.textContent = "🎞 Scarica GIF";
+  }
+  btn.disabled = false;
+};
+
+// UI helpers
+function showLoading(show) {
+  document.getElementById("loading").style.display = show ? "flex" : "none";
+  generateBtn.disabled = show;
+  if (show) document.getElementById("empty-state").style.display = "none";
+}
+function setLoadingStep(msg) {
+  document.getElementById("loading-step").textContent = msg;
+}
+function hideResult() {
+  document.getElementById("result").style.display = "none";
+}
+function showError(msg) {
+  const el = document.getElementById("error-msg");
+  el.textContent = "❌ " + msg;
+  el.style.display = "block";
+  document.getElementById("empty-state").style.display = "none";
+}
+function hideError() {
+  document.getElementById("error-msg").style.display = "none";
+}
+</script>
+</body>
+</html>
